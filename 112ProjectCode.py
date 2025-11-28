@@ -1,0 +1,295 @@
+# Place your creative task here!
+# can you import music into here?
+# or maybe just copy that one tanagram game cus i got not ideas or they're too complicated
+# RHYTM GSAMES
+# OR PIXEL ART BUT THAT MIGHT BE TOO EASY HIGHKEY D:
+# Be clever, be creative, have fun!
+# use sin to move the image repeatedly (ex w/ the axolotls)
+from cmu_graphics import *
+import time
+
+# checks validity of the key presses
+class Keys:
+    def __init__(self, arrowNum, startTime, x, speed):
+        self.arrowNum = arrowNum # 0, 1, 2, 3 (based on arrowUrls)
+        self.startTime = startTime # based on steps passed
+        self.x = x
+        self.y = 0
+        self.speed = speed
+        self.scored = False
+        self.miss = False
+        
+    def move(self):
+        self.y += self.speed
+    
+    def __repr__(self):
+        return f'{self.arrowNum}, {self.startTime}'
+    
+    def drawKey(self, app):
+        width, height = 90, 80
+        # print(self.arrowNum)
+        drawImage(app.arrowUrls[self.arrowNum], self.x, self.y, 
+                    width = width, height = height, align = 'center')
+
+# def readFile(path):
+#     with open(path) as f:
+#         return f.read()
+    
+
+
+def onAppStart(app):
+    baseAxolotlUrl = 'https://raw.githubusercontent.com/aluo3/112ProjectMedia/master/axolotls'
+    baseArrowUrl = 'https://raw.githubusercontent.com/aluo3/112ProjectMedia/master/arrow_folder'
+    app.arrowUrls = [f'{baseArrowUrl}/key{i}.png?v=1' for i in range(4)]
+    app.axolotlUrls = [f'{baseAxolotlUrl}/axolotl{i}.jpg' for i in range(4)]
+    
+    
+    urls = 'https://drive.google.com/file/d/1ypx46LhGBD_Wy45lRUIFNb6bFNOdZ5q9/view?usp=sharing'
+    app.sound = Sound(urls)
+    
+    # mapUrl = 'https://raw.githubusercontent.com/aluo3/112ProjectMedia/master/songMaps'
+    # app.mapUrls = [f'{mapUrl}/songMap{i}.txt' for i in range(1)]
+    
+    # contents = [readFile(app.mapUrls[0])]
+    
+    
+    # print(contents)
+    
+    app.stepsPerSecond = 20
+    
+    app.keyXCoords = [550, 650, 750, 850]
+    app.keyYCoord = 600
+    
+    # app.scrollSpeed = 5
+    app.notesList = []
+    app.offset = 60
+    
+    # quarter note = 7 steps!!!!
+    
+    # minus 60 because the song waits 60 steps before starting (pre-loading arrows before the song starts) <- idiot why didn't you use the variable
+    
+    app.songMap = []
+    
+    for note, step in getData():
+        app.songMap.append((note, step - app.offset))
+    
+    app.currentStep = 0
+    app.mapIndex = 0
+    app.speed = 10
+    
+    app.getNotes = False
+    app.recordedNotes = []
+    app.startTime = None
+    app.soundStarted = False
+    app.gameTimeStart = None
+    
+    app.gameStart = False
+    app.gamePause = True
+    app.height, app.width = 700, 900
+    
+    # print(app.songMap[:5])
+    # print(app.offset)
+    # print(app.keyYCoord/app.speed)
+    
+# START SCREEN 
+def start_redrawAll(app):
+    drawLabel('start game', 100, 100)
+
+def start_onKeyPress(app, key):
+    if key == 'space':
+        setActiveScreen('game')
+    elif key == 'q':
+        setActiveScreen('songChange')
+
+#CHANIGN SONG SCREEN
+def songChange_redrawAll(app):
+    drawLabel('song change', 100, 100)
+
+
+def songChange_onKeyPress(app, key):
+    if key == 'space':
+        setActiveScreen('game')
+        
+    # elif key == 'enter':
+    #     setActiveScreen('start')
+
+
+#GAME SCREEN
+def game_redrawAll(app):
+    
+    # draw note screen
+    drawRect(480, 0, 420, 700, fill = gradient('black', 'silver', 'white', start = 'top'), opacity = 50 )
+
+    # draw sprites, add othe background stuff
+    game_drawAxolotl(app)
+    game_drawKeys(app)
+    
+    # draws all keys coming down
+    for note in app.notesList:
+        note.drawKey(app)
+    
+    drawLabel(f'{app.currentStep}', 100, 200)
+    
+    drawLabel('game mode', 100, 100)
+
+def game_drawKeys(app):
+    # put arrows/keys on screen put into a class??
+    x, y, = 450, 600
+    for i in range(4):
+        x += 100
+        drawImage(app.arrowUrls[i], x, y, width = 90, height = 80, align = 'center')
+
+def game_drawAxolotl(app):
+    #draw axolotls
+    drawImage(app.axolotlUrls[2], 370, 570, width = 120, height = 100, align = 'center')
+    drawImage(app.axolotlUrls[0], 130, 570, width = 120, height = 100, align = 'center')
+    drawImage(app.axolotlUrls[3], 250, 500, width = 120, height = 100, align = 'center')
+    drawImage(app.axolotlUrls[1], 250, 600, width = 120, height = 100, align = 'center')
+    
+def game_onKeyPress(app, key):
+    if key == 'q':
+        setActiveScreen('songChange')
+    elif key == 'enter':
+        if app.gamePause == True:
+            app.gameStart = True
+            app.gamePause = False
+            
+            if app.gameStart == None:
+                app.gameStart = time.time()
+            
+            if app.soundStarted:
+                app.sound.play()
+            
+        else:
+            app.gamePause = True
+            app.sound.pause()
+    
+    # getting the notes of the song (not for the user to do)
+    if key == 'r':
+        app.getNotes = not app.getNotes
+        if app.getNotes:
+            app.recordedNotes = []
+            print('recording')
+        else:
+            print('no reocrding')
+    
+    if app.getNotes and key in ['d', 'f', 'j', 'k']:
+        dictKey = {'d': 0, 'f': 1, 'j': 2, 'k': 3}
+        app.recordedNotes.append((dictKey[key], app.currentStep - app.offset))
+    
+    print(app.recordedNotes)
+
+
+def game_onStep(app):
+    # print(app.notesList)
+    # when the game is on and not paused...
+    if app.gameStart and app.gamePause == False:
+        
+        
+        # increase step count by 1
+        app.currentStep += 1
+        
+        # this way the song will still play after being paused
+        if app.currentStep == app.offset and not app.soundStarted:
+            app.soundStarted = True
+            app.sound.play()
+        
+        
+        if app.mapIndex < len(app.songMap):
+            noteIndex, stepCount = app.songMap[app.mapIndex]
+            # print(app.songMap[app.mapIndex])
+            
+            if app.currentStep == stepCount:
+                x = app.keyXCoords[noteIndex]
+                
+                thisNote = Keys(noteIndex, stepCount, x, app.speed)
+                
+                # print(thisNote)
+                app.notesList.append(thisNote)
+
+                app.mapIndex += 1
+            
+        for note in app.notesList:
+            if note.scored == False and note.miss == False:
+                note.move()
+                # print('moving', note.y)
+
+                if note.y > app.keyYCoord + 100:
+                    note.miss = True
+                    # print('miss')
+            
+    
+    # remove notes from list when passed the drawing board.
+    for note in app.notesList:
+        if note.y > app.height + 100 or note.miss == True:
+            app.notesList.remove(note)
+    
+    # print(time.time(), app.currentStep)
+        
+        
+    # pass # or use time??? this is for generating keys based on the song
+
+#######################################################
+# Data
+#######################################################
+
+def getData():
+    return [
+    (0, 67), (1, 73), (2, 80), (3, 87), (0, 94), (2, 103), (0, 106), (0, 122), 
+    (2, 131), (0, 134), (0, 151), (2, 159), (0, 162), (3, 208), (2, 232), 
+    (3, 236), (0, 260), (1, 265), (2, 271), (3, 277), (2, 284), (1, 292), 
+    (0, 299), (1, 307), (2, 317), (3, 320), (0, 344), (3, 349), (0, 372), 
+    (1, 376), (2, 383), (3, 390), (2, 397), (1, 404), (0, 412), (3, 419), 
+    (0, 446), (0, 458), (1, 462), (2, 471), (3, 476), (2, 486), (3, 490), 
+    (1, 499), (0, 505), (1, 514), (0, 518), (2, 528), (3, 533), (0, 559), 
+    (3, 571), (0, 574), (1, 584), (2, 587), (0, 598), (3, 603), (1, 612), 
+    (2, 616), (0, 626), (3, 631), (0, 640), (1, 644), (0, 657), (1, 663), 
+    (0, 671), (0, 682), (0, 692), (0, 696), (3, 700), (0, 704), (2, 713), 
+    (3, 719), (2, 725), (2, 737), (0, 746), (1, 750), (3, 752), (2, 756), 
+    (0, 759), (1, 762), (3, 765), (3, 785), (2, 792), (0, 814), (1, 821), 
+    (0, 847), (3, 850), (1, 856), (2, 863), (0, 870), (0, 878), (1, 885), 
+    (0, 892), (0, 903), (0, 913), (0, 917), (3, 920), (0, 923), (2, 931), 
+    (3, 939), (2, 946), (2, 957), (0, 967), (1, 969), (3, 973), (2, 977), 
+    (0, 980), (1, 983), (3, 987), (3, 1009), (2, 1015), (2, 1036), (3, 1043), 
+    (0, 1068), (1, 1073), (0, 1080), (3, 1086), (2, 1092), (3, 1099), (0, 1121), 
+    (0, 1125), (1, 1129), (3, 1133), (2, 1137), (0, 1140), (3, 1143), (1, 1147), 
+    (2, 1150), (3, 1154), (3, 1157), (0, 1176), (0, 1179), (3, 1183), (2, 1189), 
+    (2, 1193), (3, 1197), (2, 1200), (0, 1203), (1, 1207), (3, 1211), (2, 1219), 
+    (0, 1225), (0, 1228), (3, 1235), (2, 1240), (1, 1248), (0, 1251), (3, 1255), 
+    (1, 1258), (2, 1263), (0, 1280), (0, 1284), (3, 1287), (1, 1290), (2, 1294), 
+    (0, 1298), (3, 1299), (1, 1304), (2, 1308), (3, 1313), (2, 1318), (3, 1328), 
+    (0, 1341), (1, 1344), (3, 1353), (2, 1358), (0, 1368), (1, 1372), (3, 1381), 
+    (2, 1385), (0, 1395), (1, 1398), (3, 1407), (2, 1411), (0, 1439), (0, 1451), 
+    (3, 1455), (1, 1463), (3, 1467), (0, 1477), (2, 1481), (3, 1489), (2, 1493), 
+    (1, 1503), (0, 1507), (2, 1516), (3, 1519), (0, 1532), (1, 1538), (0, 1546), 
+    (0, 1556), (1, 1567), (1, 1570), (2, 1573), (1, 1577), (2, 1585), (3, 1592), 
+    (2, 1599), (2, 1611), (0, 1620), (1, 1624), (3, 1627), (2, 1631), (0, 1633), 
+    (1, 1637), (3, 1640), (3, 1660), (2, 1667), (0, 1686), (1, 1693), (0, 1720), 
+    (1, 1723), (2, 1729), (3, 1736), (2, 1743), (0, 1751), (2, 1757), (3, 1763), 
+    (3, 1773), (0, 1781), (0, 1785), (2, 1789), (0, 1792), (1, 1801), (3, 1808), 
+    (0, 1814), (2, 1825), (3, 1835), (3, 1838), (0, 1842), (2, 1845), (1, 1847), 
+    (3, 1851), (0, 1855), (3, 1875), (2, 1881), (2, 1901), (3, 1908), (0, 1931), 
+    (1, 1936), (2, 1946), (3, 1956), (1, 1966), (0, 2039), (1, 2051), (2, 2070), 
+    (3, 2087), (3, 2100), (2, 2126), (3, 2131), (0, 2157), (1, 2170), (0, 2184), 
+    (1, 2191), (0, 2199), (0, 2210), (1, 2219), (1, 2223), (2, 2227), (1, 2231), 
+    (0, 2240), (1, 2246), (2, 2253), (3, 2264), (2, 2274), (3, 2278), (0, 2281), 
+    (1, 2284), (2, 2288), (3, 2291), (0, 2294), (3, 2316), (2, 2323), (2, 2343), 
+    (3, 2349), (0, 2376), (1, 2378), (2, 2384), (3, 2390), (2, 2396), (0, 2403), 
+    (1, 2408), (2, 2415), (2, 2426), (0, 2436), (1, 2439), (3, 2443), (2, 2447), 
+    (3, 2457), (2, 2462), (3, 2468), (3, 2478), (0, 2487), (1, 2491), (2, 2493), 
+    (3, 2498), (2, 2502), (0, 2504), (1, 2508), (3, 2528), (2, 2534), (0, 2556), 
+    (1, 2562), (0, 2586), (1, 2591), (2, 2597), (3, 2602), (2, 2609), (0, 2616), 
+    (1, 2621), (3, 2624), (2, 2628), (0, 2643), (1, 2647), (3, 2648), (2, 2652), 
+    (3, 2668), (2, 2672), (0, 2674), (1, 2677), (3, 2693), (2, 2697), (0, 2700), 
+    (1, 2703), (3, 2712), (2, 2722), (3, 2726), (2, 2729), (0, 2731), (3, 2755), 
+    (1, 2761), (3, 2782), (1, 2789)]
+
+#######################################################
+# Main
+#######################################################
+
+def main():
+    runAppWithScreens(initialScreen = 'start')
+
+main()
+
